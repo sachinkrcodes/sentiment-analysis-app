@@ -1,60 +1,78 @@
-# Sentiment Analysis Web Application (Java back-end + browser dashboard)
+# Sentiment Analysis Web App
 
-Subject: Social Media Analytics. Two real analyzers you can switch between at runtime:
-1. **Lexicon (rule based)** — word scores, negation, boosters, CAPS, "!", "but" (VADER-style).
-2. **Naive Bayes (machine learning)** — trained inside the app on a labelled CSV, so it really learns.
+Web app that scores any text as positive, neutral or negative with two engines, a word-score lexicon and a Naive Bayes model trained inside the app, and shows the results on a live dashboard.
 
-## Run (needs JDK 17 or newer)
+- **Status:** finished
+- **Built:** September 2026
+- **Keywords:** Java, HTTP server, Naive Bayes, Sentiment Analysis, JavaScript, Canvas, Social Media Analytics
 
-| System | Command |
-|---|---|
-| Windows | double-click `run.bat` |
-| Linux / macOS | `sh run.sh` |
+## Highlights
 
-It starts a small Java web server and opens **http://localhost:8080** in your browser (or open it yourself
-if it doesn't). To use a different port: `java Main.java 9090` (from `src/sentiment/`) or `java -jar SentimentApp.jar 9090`.
+- Built two analyzers you can switch between while the app runs: Lexicon (word scores, negation, boosters, CAPS, "!" and "but") and Naive Bayes trained from a labelled CSV.
+- Added 6 pages: Analyze (highlighted words and a live feed simulator), Batch or CSV, Dashboard, History, Lexicon editor and Model Lab.
+- Made the lexicon editable at runtime: change a word score and the next analysis uses it.
+- Added Model Lab: upload a `text,label` CSV to retrain, then compare both engines with accuracy, precision, recall, F1 and a confusion matrix.
+- Wrote it all in plain Java with no libraries: own HTTP server, own JSON and CSV code, charts on canvas. History and edits are saved as CSV files.
 
-Everything you do (history, your lexicon edits, an uploaded training set) is saved in the `data/` folder as
-plain CSV files, so it survives a restart. Delete a file there to reset that part.
+## Screenshots
 
-## Self test (no server needed)
+![Analyze page with a positive text](docs/screenshots/01-analyze.png)
 
+Analyze: a positive text with its score, and the words that raised it highlighted.
+
+![Batch page with many lines scored at once](docs/screenshots/02-batch.png)
+
+Batch: one post per line, each scored, with the total and the average.
+
+![Dashboard with trend chart and top words](docs/screenshots/03-dashboard.png)
+
+Dashboard: totals, score trend, sentiment share and the top positive and negative words, all computed from the history.
+
+![Model Lab with the training dataset](docs/screenshots/04-model-lab.png)
+
+Model Lab: the training dataset behind Naive Bayes (463 labelled examples).
+
+## Tech
+
+- Java 17 or newer: back-end and business logic (`AnalysisService`).
+- `com.sun.net.httpserver`: the built-in Java HTTP server, so there is nothing to install.
+- Plain HTML, CSS and JavaScript: the 6 pages. Charts are drawn on `<canvas>`.
+- CSV files in `data/`: lexicon, training set, feed and history, so everything survives a restart.
+
+## Run it
+
+- Needs: JDK 17 or newer
+- Tested on: JDK 21 on Linux (self test: 19 checks pass)
+
+Windows: double-click `run.bat`.
+
+Linux or macOS:
+
+```bash
+sh run.sh
 ```
+
+Then open http://localhost:8080 if the browser does not open by itself.
+
+Self test:
+
+```bash
 javac -d out $(find src -name "*.java")
 cp -r data web out/
 java -cp out sentiment.test.EngineSelfTest
 ```
-Checks the lexicon rules (negation, boosters, CAPS, "!"), a JSON/CSV round trip, and the Naive Bayes
-classifier's accuracy on a held-out test split of the bundled dataset.
 
-## Pages
+More detail is in [docs/GUIDE.md](docs/GUIDE.md).
 
-1. **Analyze** one text, with a highlighted breakdown, and a live "social feed" simulator.
-2. **Batch / CSV** many lines at once, or upload a CSV (any `text`/`review`/`comment`/`post`/`tweet` column).
-3. **Dashboard** totals, a score trend chart, sentiment share, and the top positive/negative words seen so far
-   (all computed live from your history — nothing is fixed).
-4. **History** search, filter by label, delete entries.
-5. **Lexicon** add, edit or remove words at runtime; changes apply to the next analysis immediately.
-6. **Model Lab** see the current training dataset, upload your own `text,label` CSV to retrain Naive Bayes,
-   and run a live evaluation (accuracy, precision, recall, F1, confusion matrix) comparing both analyzers on
-   a held-out test split.
+## Limits and next
 
-## Why it is not static
-* The lexicon is a CSV you can edit from the Lexicon page while the app is running.
-* Naive Bayes is trained from data, not hand-coded: upload any labelled CSV and it relearns from it.
-* The dashboard, history and evaluation numbers are computed from what you actually analyzed, not fixed demo numbers.
-* The live feed picks a random post from `data/feed.csv` each time, so no run looks the same.
+- Not done: the bundled training set (463 rows) reuses a small set of sentence patterns, so Naive Bayes scores 100% on its own test split. That number does not predict accuracy on real posts.
+- Not done: the lexicon has about 170 words and cannot understand sarcasm. It also scores "The delivery was okay, nothing special." as positive (0.226).
+- Not done: English only, one shared history, no user accounts.
+- Not done: it runs on your own computer (localhost). There is no hosted version.
 
-## Project structure
+## Author
 
-```
-src/sentiment/analyzer   Analyzer (interface), LexiconAnalyzer, NaiveBayesAnalyzer, Tokenizer, Labels, Dataset
-src/sentiment/service    AnalysisService (all business logic), Evaluation
-src/sentiment/storage    HistoryStore, LexiconStore (both persisted as CSV in data/)
-src/sentiment/web        Server (plain java.net HTTP server), ApiHandlers (REST), StaticHandler
-src/sentiment/util       Json, Csv, Res  (small hand-written helpers, no external libraries)
-web/                     index.html, app.js, style.css  (charts are drawn with plain <canvas>, no library)
-data/                    lexicon.csv, training.csv (463 labelled rows), feed.csv (308 posts)
-```
-REST API: `/api/analyze`, `/api/batch`, `/api/upload`, `/api/feed/next`, `/api/stats`, `/api/history*`,
-`/api/lexicon*`, `/api/dataset`, `/api/train`, `/api/evaluate`.
+Sachin Kumar | [GitHub](https://github.com/sachinkrcodes) | [LinkedIn](https://www.linkedin.com/in/sachinkrcodes) | Portfolio: [sachinkrcodes.vercel.app](https://sachinkrcodes.vercel.app) | sachinkrcodes@gmail.com
+
+MIT License. See [LICENSE](LICENSE).
