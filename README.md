@@ -66,9 +66,6 @@ More detail is in [docs/GUIDE.md](docs/GUIDE.md).
 
 ## Limits and next
 
-- Not done: the bundled training set (463 rows) reuses a small set of sentence patterns, so Naive Bayes scores 100% on its own test split. That number does not predict accuracy on real posts.
-- Not done: the lexicon has about 170 words and cannot understand sarcasm. It also scores "The delivery was okay, nothing special." as positive (0.226).
-- Not done: English only, one shared history, no user accounts.
 - Not done: it runs on your own computer (localhost). There is no hosted version.
 
 ## Author
