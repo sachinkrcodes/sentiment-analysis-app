@@ -54,6 +54,8 @@ public final class LexiconAnalyzer implements Analyzer {
             if (but >= 0 && i != but) v *= (i < but) ? 0.5 : 1.5;                                              // "but" rule
             val[i] = v; sum += v;
         }
+        // "nothing special", "nothing great" ... means lukewarm, so a positive total is flattened to neutral
+        if (sum > 0 && text.toLowerCase().matches(".*\\bnothing (special|great|amazing|impressive|exciting|remarkable|good|fancy)\\b.*")) sum = 0;
         long bangs = text.chars().filter(c -> c == '!').count();
         double ex = Math.min(bangs, 4) * 0.292;                                                                // "!"
         if (sum > 0) sum += ex; else if (sum < 0) sum -= ex;

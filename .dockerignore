@@ -1,0 +1,10 @@
+out/
+.git/
+.github/
+sources.txt
+*.class
+data/history.csv
+data/lexicon-custom.csv
+data/training-custom.csv
+docs/
+tools/

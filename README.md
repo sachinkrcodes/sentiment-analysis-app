@@ -10,15 +10,17 @@ Web app that scores any text as positive, neutral or negative with two engines, 
 
 - Built two analyzers you can switch between while the app runs: Lexicon (word scores, negation, boosters, CAPS, "!" and "but") and Naive Bayes trained from a labelled CSV.
 - Added 6 pages: Analyze (highlighted words and a live feed simulator), Batch or CSV, Dashboard, History, Lexicon editor and Model Lab.
+- Made Model Lab honest: it removes repeated rows, keeps every class in the test split, shows a majority-class baseline and 5-fold cross-validation.
+- Added a light and dark interface with a bottom dock, and a read-only mode (`READ_ONLY=true`) for public demos.
 - Made the lexicon editable at runtime: change a word score and the next analysis uses it.
 - Added Model Lab: upload a `text,label` CSV to retrain, then compare both engines with accuracy, precision, recall, F1 and a confusion matrix.
 - Wrote it all in plain Java with no libraries: own HTTP server, own JSON and CSV code, charts on canvas. History and edits are saved as CSV files.
 
 ## Screenshots
 
-![Analyze page with a positive text](docs/screenshots/01-analyze.png)
+![Analyze page with a negated text](docs/screenshots/01-analyze.png)
 
-Analyze: a positive text with its score, and the words that raised it highlighted.
+Analyze: negation works. "not AMAZING" and "not very friendly" are scored as negative and the words are marked.
 
 ![Batch page with many lines scored at once](docs/screenshots/02-batch.png)
 
@@ -30,7 +32,7 @@ Dashboard: totals, score trend, sentiment share and the top positive and negativ
 
 ![Model Lab with the training dataset](docs/screenshots/04-model-lab.png)
 
-Model Lab: the training dataset behind Naive Bayes (463 labelled examples).
+Model Lab: the training dataset behind Naive Bayes (439 labelled examples after 24 repeated rows were removed).
 
 ## Tech
 
@@ -42,7 +44,7 @@ Model Lab: the training dataset behind Naive Bayes (463 labelled examples).
 ## Run it
 
 - Needs: JDK 17 or newer
-- Tested on: JDK 21 on Linux (self test: 19 checks pass)
+- Tested on: JDK 21 on Linux (self test: 35 checks pass)
 
 Windows: double-click `run.bat`.
 
@@ -66,10 +68,10 @@ More detail is in [docs/GUIDE.md](docs/GUIDE.md).
 
 ## Limits and next
 
-- Not done: the bundled training set (463 rows) reuses a small set of sentence patterns, so Naive Bayes scores 100% on its own test split. That number does not predict accuracy on real posts.
-- Not done: the lexicon has about 170 words and cannot understand sarcasm. It also scores "The delivery was okay, nothing special." as positive (0.226).
+- Not done: the bundled training set (439 rows) reuses a small set of sentence patterns, so Naive Bayes scores 100% on its own test split. That number does not predict accuracy on real posts.
+- Not done: the lexicon has about 170 words and cannot understand sarcasm. Phrases it has no rule for can still be scored wrongly.
 - Not done: English only, one shared history, no user accounts.
-- Not done: it runs on your own computer (localhost). There is no hosted version.
+- Not done: no hosted link yet. A `Dockerfile` is included (see [docs/DEPLOY.md](docs/DEPLOY.md)).
 
 ## Author
 

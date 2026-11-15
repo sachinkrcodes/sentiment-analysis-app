@@ -20,6 +20,8 @@ public final class AnalysisService {
     public final HistoryStore history;
     private volatile List<Sample> dataset = new ArrayList<>();
     private volatile String datasetName = "";
+    private volatile int dupesRemoved, conflicting;
+    private volatile String labelMapping = "";
     private final List<String> feedPool = new ArrayList<>();
     private final Random rnd = new Random();
     private final File customTraining = Res.dataFile("training-custom.csv");
@@ -31,7 +33,7 @@ public final class AnalysisService {
         String csv;
         if (customTraining.isFile()) { csv = new String(Files.readAllBytes(customTraining.toPath()), StandardCharsets.UTF_8); datasetName = "your uploaded dataset"; }
         else { csv = Res.readDefault("data/training.csv"); datasetName = "built-in sample dataset"; }
-        if (csv != null) { dataset = Dataset.parse(csv).samples; nb.train(dataset); }
+        if (csv != null) { Dataset d0 = Dataset.parse(csv); remember(d0); dataset = d0.samples; nb.train(dataset); }
         String feed = Res.readDefault("data/feed.csv");
         if (feed != null) for (String[] r : Csv.parse(feed)) if (r.length > 0 && !r[0].trim().isEmpty()) feedPool.add(r[0].trim());
     }
@@ -67,6 +69,8 @@ public final class AnalysisService {
         return out;
     }
 
+    private void remember(Dataset d) { dupesRemoved = d.duplicatesRemoved; conflicting = d.conflicting; labelMapping = d.mapping; }
+
     // ---------------- training and evaluation ----------------
     public Map<String, Object> train(String csv) throws IOException {
         Dataset d;
@@ -74,13 +78,16 @@ public final class AnalysisService {
             Files.deleteIfExists(customTraining.toPath());
             d = Dataset.parse(Res.readDefault("data/training.csv"));
             datasetName = "built-in sample dataset";
+            remember(d);
         } else {
             d = Dataset.parse(csv);
             int[] c = d.counts();
             if (d.samples.size() < 30 || c[0] == 0 || c[2] == 0)
-                throw new IllegalArgumentException("Need at least 30 rows with 'positive' and 'negative' labels (format: text,label).");
+                throw new IllegalArgumentException("Need at least 30 usable rows with both positive and negative labels (columns: text,label). "
+                        + (d.mapping.isEmpty() ? "" : "Labels: " + d.mapping + ". ") + "Rows skipped: " + d.skipped + ".");
             Files.write(customTraining.toPath(), csv.getBytes(StandardCharsets.UTF_8));
             datasetName = "your uploaded dataset";
+            remember(d);
         }
         dataset = d.samples;
         nb.train(dataset);
@@ -96,6 +103,7 @@ public final class AnalysisService {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("name", datasetName); m.put("size", ds.size()); m.put("counts", c);
         m.put("vocabulary", nb.vocabularySize());
+        m.put("duplicatesRemoved", dupesRemoved); m.put("conflicting", conflicting); m.put("labelMapping", labelMapping);
         List<Object> ex = new ArrayList<>();
         for (int i = 0; i < Math.min(8, ds.size()); i++) {
             Sample s = ds.get(rnd.nextInt(ds.size()));
@@ -108,7 +116,7 @@ public final class AnalysisService {
     }
 
     public Map<String, Object> evaluate(double testFraction, long seed) {
-        if (dataset.size() < 10) throw new IllegalArgumentException("Not enough training data to evaluate.");
+        if (dataset.size() < 20) throw new IllegalArgumentException("Not enough training data to evaluate (need at least 20 rows).");
         return Evaluation.run(dataset, Math.max(0.05, Math.min(0.5, testFraction)), seed, lex);
     }
 

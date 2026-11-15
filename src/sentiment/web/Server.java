@@ -15,14 +15,28 @@ import java.util.*;
 
 /** Plain Java HTTP server (no framework). Wires URLs to ApiHandlers and serves the web/ folder. */
 public final class Server {
+    /** Largest request body accepted (a training CSV is the biggest thing sent). */
+    static final int MAX_BODY = 40 * 1024 * 1024;
+
+    /** Endpoints that change data. They answer 403 when the server runs in read-only mode (a public demo). */
+    private static final Set<String> MUTATING = Set.of(
+            "/api/train", "/api/lexicon/set", "/api/lexicon/remove", "/api/lexicon/reset",
+            "/api/history/delete", "/api/history/clear");
+
     private final HttpServer http;
     private final AnalysisService service;
+    private final boolean readOnly;
+    private final java.util.concurrent.ExecutorService pool;
 
-    public Server(AnalysisService service, int port) throws IOException {
+    public Server(AnalysisService service, int port) throws IOException { this(service, port, false); }
+
+    public Server(AnalysisService service, int port, boolean readOnly) throws IOException {
         this.service = service;
+        this.readOnly = readOnly;
         http = HttpServer.create(new InetSocketAddress(port), 0);
         ApiHandlers api = new ApiHandlers(service);
 
+        route("/api/health", (b, q) -> Map.of("status", "ok", "readOnly", this.readOnly));
         route("/api/analyze", api::analyze);
         route("/api/batch", api::batch);
         route("/api/upload", api::upload);
@@ -41,7 +55,8 @@ public final class Server {
         route("/api/evaluate", api::evaluate);
 
         http.createContext("/", new StaticHandler());
-        http.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(8));
+        pool = java.util.concurrent.Executors.newFixedThreadPool(8);
+        http.setExecutor(pool);
     }
 
     public interface ApiFn { Object handle(Map<String, Object> body, Map<String, String> query) throws Exception; }
@@ -49,10 +64,16 @@ public final class Server {
     private void route(String path, ApiFn fn) {
         http.createContext(path, ex -> {
             try {
+                if (readOnly && MUTATING.contains(path)) {
+                    send(ex, 403, Json.write(Map.of("ok", false, "error", "This public demo is read-only. Run the app on your own computer to edit data.")));
+                    return;
+                }
                 Map<String, String> q = parseQuery(ex.getRequestURI().getRawQuery());
                 Map<String, Object> body = new LinkedHashMap<>();
                 if ("POST".equals(ex.getRequestMethod())) {
-                    String raw = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                    byte[] bytes = ex.getRequestBody().readNBytes(MAX_BODY + 1);
+                    if (bytes.length > MAX_BODY) throw new IllegalArgumentException("That file is too big (limit 40 MB). Use fewer rows: see tools/make-sample.mjs.");
+                    String raw = new String(bytes, StandardCharsets.UTF_8);
                     if (!raw.isBlank()) body = Json.asObj(Json.parse(raw));
                 }
                 Object result = fn.handle(body, q);
@@ -81,11 +102,16 @@ public final class Server {
     private static void send(HttpExchange ex, int code, String body) throws IOException {
         byte[] data = body.getBytes(StandardCharsets.UTF_8);
         ex.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+        ex.getResponseHeaders().set("X-Content-Type-Options", "nosniff");
+        ex.getResponseHeaders().set("Cache-Control", "no-store");
         ex.sendResponseHeaders(code, data.length);
         try (OutputStream os = ex.getResponseBody()) { os.write(data); }
     }
 
     public void start() { http.start(); }
 
-    public void stop() { http.stop(0); }
+    /** The port actually in use (useful when 0 was asked for). */
+    public int port() { return http.getAddress().getPort(); }
+
+    public void stop() { http.stop(0); pool.shutdownNow(); }
 }
