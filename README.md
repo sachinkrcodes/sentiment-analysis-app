@@ -69,9 +69,6 @@ More detail is in [docs/GUIDE.md](docs/GUIDE.md).
 ## Limits and next
 
 - Not done: the bundled training set (439 rows) reuses a small set of sentence patterns, so Naive Bayes scores 100% on its own test split. That number does not predict accuracy on real posts.
-- Not done: the lexicon has about 170 words and cannot understand sarcasm. Phrases it has no rule for can still be scored wrongly.
-- Not done: English only, one shared history, no user accounts.
-- Not done: no hosted link yet. A `Dockerfile` is included (see [docs/DEPLOY.md](docs/DEPLOY.md)).
 
 ## Author
 
